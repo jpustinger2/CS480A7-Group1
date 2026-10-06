@@ -5,9 +5,9 @@ How to run mine_raw_data.py:
   - Generate token and copy immediately (only can see token once)
   - Open local repository (either on personal or school machine), open a terminal
   - Enter the following commands on terminal of choice:
-    * Command Prompt: set GITHUB_TOKEN=$\text{\color{gray}{<insert token here>}}$
-    * Powershell: $env:GITHUB_TOKEN="$\text{\color{gray}{<insert token here>}}$"
-    * Mac/Linux: export GITHUB_TOKEN=$\text{\color{gray}{<insert token here>}}$
+    * Command Prompt: set GITHUB_TOKEN=<insert token here>}}
+    * Powershell: $env:GITHUB_TOKEN="<insert token here>"
+    * Mac/Linux: export GITHUB_TOKEN=<insert token here>
   - May have to run: pip install requests
   - Run: python mine_raw_data.py
     * Optional Args:
