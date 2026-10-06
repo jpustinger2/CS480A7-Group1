@@ -1,6 +1,7 @@
 How to run mine_raw_data.py:
   - Go to GitHub
-  - Top Right Profile Picture --> Settings --> Developer Settings --> Personal Access Tokens --> Tokens (classic) --> Generate new token (classic)
+  - Top Right Profile Picture --> Settings --> Developer Settings (Bottom of menu options)
+  - Personal Access Tokens --> Tokens (classic) --> Generate new token (classic)
   - Set expiration to personal preference, add note if you'd like, don't select any scopes
   - Generate token and copy immediately (only can see token once)
   - Open local repository (either on personal or school machine), open a terminal

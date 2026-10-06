@@ -5,7 +5,10 @@ import sys
 import time
 from datetime import datetime, timezone
 
-import requests
+try:
+    import requests  # type: ignore[import-not-found]
+except ModuleNotFoundError as exc:
+    sys.exit("Missing dependency 'requests', run pip install requests")
 
 OWNER, REPO = "zephyrproject-rtos", "zephyr"
 API = "https://api.github.com"
