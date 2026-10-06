@@ -132,10 +132,10 @@ def to_row(item):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Retrieve raw Zephyr issues + PRs to one CSV.")
-    ap.add_argument("--start", default=DEFAULT_START, help="window start, inclusive (YYYY-MM-DD, UTC)")
-    ap.add_argument("--end", default=DEFAULT_END, help="window end, exclusive (YYYY-MM-DD, UTC)")
-    ap.add_argument("--out", default="raw_data.csv")
+    ap = argparse.ArgumentParser(description="Retrieve raw zephyr issues + prs to one CSV.")
+    ap.add_argument("--start", default=DEFAULT_START, help="Starting timestamp, inclusive (YYYY-MM-DD, UTC)")
+    ap.add_argument("--end", default=DEFAULT_END, help="Ending timestamp, exclusive (YYYY-MM-DD, UTC)")
+    ap.add_argument("--out", default="raw_data.csv", help="Name of output file, should end in .csv")
     ap.add_argument("--max-records", type=int, default=0, help="stop after N rows (testing)")
     a = ap.parse_args()
 
