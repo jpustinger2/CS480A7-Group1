@@ -155,7 +155,7 @@ def main():
     page = 0
     print(f"Retrieving issues and PRs created {start:%Y-%m-%d} to {end:%Y-%m-%d} (UTC) ...")
 
-    with open(partial, "w", newline="", encoding="utf-8") as f:
+    with open(partial, mode="w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=COLUMNS)
         writer.writeheader()
         done = False
