@@ -14,24 +14,25 @@ OWNER, REPO = "zephyrproject-rtos", "zephyr"
 API = "https://api.github.com"
 DEFAULT_START = "2021-01-01"
 DEFAULT_END = "2026-01-01"
+PAGES_PER_CHUNK = 100
 
 REACTION_KEYS = [
-    "+1", 
-    "-1", 
-    "laugh", 
-    "hooray", 
-    "confused", 
-    "heart", 
-    "rocket", 
+    "+1",
+    "-1",
+    "laugh",
+    "hooray",
+    "confused",
+    "heart",
+    "rocket",
     "eyes"]
 
 COLUMNS = [
-    "record_type",       
+    "record_type",
     "number",
     "title",
-    "body",                 
-    "labels",               
-    "state",                
+    "body",
+    "labels",
+    "state",
     "state_reason",
     "is_draft",
     "author",
@@ -45,6 +46,20 @@ COLUMNS = [
     "merged_at",
     "num_comments",
     "locked",
+    *[f"react_{k}" for k in REACTION_KEYS],
+    "react_total",
+    "html_url",
+]
+
+COMMENT_COLUMNS = [
+    "comment_id",
+    "pr_number",
+    "body",
+    "author",
+    "author_type",
+    "author_association",
+    "created_at",
+    "updated_at",
     *[f"react_{k}" for k in REACTION_KEYS],
     "react_total",
     "html_url",
@@ -94,6 +109,7 @@ def get(session, url, params=None):
             wait_for_reset(response)
             continue
         if response.status_code >= 500:
+            print(f"  GitHub returned {response.status_code}, retrying ...", flush=True)
             time.sleep(min(2 ** attempt, 60))
             continue
         sys.exit(f"GitHub returned {response.status_code}: {response.text[:300]}")
@@ -134,18 +150,81 @@ def to_row(item):
     }
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Retrieve raw zephyr issues + prs to one CSV.")
-    ap.add_argument("--start", default=DEFAULT_START, help="Starting timestamp, inclusive (YYYY-MM-DD, UTC)")
-    ap.add_argument("--end", default=DEFAULT_END, help="Ending timestamp, exclusive (YYYY-MM-DD, UTC)")
-    ap.add_argument("--out", default="raw_data.csv", help="Name of output file, should end in .csv")
-    ap.add_argument("--max-records", type=int, default=0, help="stop after N rows (testing)")
-    a = ap.parse_args()
+def number_from_url(url):
+    return int(url.rstrip("/").rsplit("/", 1)[1]) if url else None
 
-    start = datetime.fromisoformat(a.start).replace(tzinfo=timezone.utc)
-    end = datetime.fromisoformat(a.end).replace(tzinfo=timezone.utc)
-    session = make_session()
-    partial = a.out + ".partial"
+
+def to_comment_row(comment, pr_number):
+    user = comment.get("user") or {}
+    rx = comment.get("reactions") or {}
+    return {
+        "comment_id": comment["id"],
+        "pr_number": pr_number,
+        "body": (comment.get("body") or "").replace("\r\n", "\n"),
+        "author": user.get("login", ""),
+        "author_type": user.get("type", ""),
+        "author_association": comment.get("author_association", ""),
+        "created_at": comment.get("created_at"),
+        "updated_at": comment.get("updated_at"),
+        **{f"react_{k}": rx.get(k, 0) for k in REACTION_KEYS},
+        "react_total": rx.get("total_count", 0),
+        "html_url": comment.get("html_url", ""),
+    }
+
+
+def mine_conversation_comments(session, writer, prs, start):
+    """Mine conversation comments (issues/comments endpoint) and keep only those on PRs in `prs`."""
+    cursor = start.strftime("%Y-%m-%dT%H:%M:%SZ")
+    seen = set()
+    kept = 0
+    page = 0
+    while True:
+        url = f"{API}/repos/{OWNER}/{REPO}/issues/comments"
+        params = {"sort": "updated", "direction": "asc", "since": cursor, "per_page": 100}
+        chunkPages = 0
+        newest = None
+        while url:
+            r = get(session, url, params)
+            params = None
+            page += 1
+            chunkPages += 1
+            for comment in r.json():
+                newest = comment["updated_at"]
+                if comment["id"] in seen:
+                    continue
+                seen.add(comment["id"])
+                number = number_from_url(comment.get("issue_url"))
+                if number in prs:
+                    writer.writerow(to_comment_row(comment, number))
+                    kept += 1
+            if newest:
+                print(f"  conversation page {page}: {kept} PR comments kept, "
+                      f"{len(seen)} scanned (reached {newest[:10]})", flush=True)
+            url = r.links.get("next", {}).get("url")
+            if url and chunkPages >= PAGES_PER_CHUNK and newest and newest != cursor:
+                cursor = newest
+                break
+        else:
+            return kept
+
+
+def mine_all_comments(session, prs, start, out):
+    partial = out + ".partial"
+    print(f"Retrieving conversation comments on {len(prs)} PRs ...")
+
+    with open(partial, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=COMMENT_COLUMNS)
+        writer.writeheader()
+        kept = mine_conversation_comments(session, writer, prs, start)
+
+    os.replace(partial, out)
+    print(f"Done: {kept} conversation comments -> {out}")
+    print(f"Check: {sum(prs.values())} conversation comments expected, {kept} mined")
+
+
+def mine_records(session, start, end, out, maxRecords):
+    partial = out + ".partial"
+    prs = {}
 
     url = f"{API}/repos/{OWNER}/{REPO}/issues"
     params = {"state": "all", "sort": "created", "direction": "desc", "per_page": 100}
@@ -178,7 +257,9 @@ def main():
                 row = to_row(item)
                 writer.writerow(row)
                 counts[row["record_type"]] += 1
-                if a.max_records and len(seen) >= a.max_records:
+                if row["record_type"] == "pr":
+                    prs[row["number"]] = row["num_comments"]
+                if maxRecords and len(seen) >= maxRecords:
                     done = True
                     break
             f.flush()
@@ -188,9 +269,27 @@ def main():
             url = r.links.get("next", {}).get("url")
             params = None
 
-    os.replace(partial, a.out)
+    os.replace(partial, out)
     print(f"Done: {counts['issue']} issues + {counts['pr']} PRs = "
-          f"{counts['issue'] + counts['pr']} rows -> {a.out}")
+          f"{counts['issue'] + counts['pr']} rows -> {out}")
+    return prs
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Retrieve raw zephyr issues + prs to one CSV, and PR conversation comments to another.")
+    ap.add_argument("--start", default=DEFAULT_START, help="Starting timestamp, inclusive (YYYY-MM-DD, UTC)")
+    ap.add_argument("--end", default=DEFAULT_END, help="Ending timestamp, exclusive (YYYY-MM-DD, UTC)")
+    ap.add_argument("--out", default="raw_data.csv", help="Name of output file, should end in .csv")
+    ap.add_argument("--comments-out", default="pr_comments.csv", help="Name of PR conversation comments output file, should end in .csv")
+    ap.add_argument("--max-records", type=int, default=0, help="stop after N rows (testing)")
+    a = ap.parse_args()
+
+    start = datetime.fromisoformat(a.start).replace(tzinfo=timezone.utc)
+    end = datetime.fromisoformat(a.end).replace(tzinfo=timezone.utc)
+    session = make_session()
+
+    prs = mine_records(session, start, end, a.out, a.max_records)
+    mine_all_comments(session, prs, start, a.comments_out)
 
 
 if __name__ == "__main__":
