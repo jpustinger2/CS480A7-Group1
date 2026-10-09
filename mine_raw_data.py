@@ -280,7 +280,7 @@ def main():
     ap.add_argument("--start", default=DEFAULT_START, help="Starting timestamp, inclusive (YYYY-MM-DD, UTC)")
     ap.add_argument("--end", default=DEFAULT_END, help="Ending timestamp, exclusive (YYYY-MM-DD, UTC)")
     ap.add_argument("--out", default="raw_data.csv", help="Name of output file, should end in .csv")
-    ap.add_argument("--comments-out", default="pr_comments.csv", help="Name of PR conversation comments output file, should end in .csv")
+    ap.add_argument("--comments-out", default="raw_comments.csv", help="Name of PR conversation comments output file, should end in .csv")
     ap.add_argument("--max-records", type=int, default=0, help="stop after N rows (testing)")
     a = ap.parse_args()
 
