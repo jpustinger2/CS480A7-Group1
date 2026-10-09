@@ -43,31 +43,35 @@ def writeOutput(filteredList, out):
 def filterComments(comments, out, docPrNumbers):
     total = 0
     kept = 0
+    bots = 0
 
     print(f"Filtering PR comments from {comments} ")
 
     with open(comments, mode="r", newline="", encoding="utf-8") as inFile, \
          open(out, mode="w", newline="", encoding="utf-8") as outFile:
-        reader = csv.DictReader(inFile)
+        reader = csv.DictReader(line.replace("\0", "") for line in inFile)
         writer = csv.DictWriter(outFile, reader.fieldnames)
         writer.writeheader()
         for row in reader:
             total += 1
+            if row["author_type"].strip() == "Bot":
+                bots += 1
+                continue
             if row["pr_number"].strip() in docPrNumbers:
                 writer.writerow(row)
                 kept += 1
 
-    print(f"Total comments filtered: {total}")
+    print(f"Total comments filtered: {total} ({bots} bot comments removed)")
     print(f"Remaining filtered comments: {kept} (on {len(docPrNumbers)} documentation PR's)")
     print(f"Successfully wrote filtered comments to {out}")
 
 
 def main():
     ap = argparse.ArgumentParser(description="Filter zephyr issues, PRs, and PR comments down to the documentation label.")
-    ap.add_argument("--data", default="official_raw_data.csv", help="Name of input file, should end in .csv")
+    ap.add_argument("--data", default="raw_data.csv", help="Name of input file, should end in .csv")
     ap.add_argument("--out", default="filtered_data.csv", help="Name of output file, should end in .csv")
-    ap.add_argument("--comments", default="pr_comments.csv", help="Name of PR comments input file, should end in .csv")
-    ap.add_argument("--comments-out", default="filtered_pr_comments.csv", help="Name of filtered PR comments output file, should end in .csv")
+    ap.add_argument("--comments", default="raw_comments.csv", help="Name of PR comments input file, should end in .csv")
+    ap.add_argument("--comments-out", default="filtered_comments.csv", help="Name of filtered PR comments output file, should end in .csv")
     a = ap.parse_args()
 
     filteredList, docPrNumbers = readInput(a.data)
