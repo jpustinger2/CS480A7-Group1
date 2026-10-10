@@ -62,7 +62,7 @@ How to run the data pipeline: Clone the repo first (either local or remote), the
     * All positive and negative reactions/buzzwords are summed up for analysis. For PRs, totals include associated PR comments
     * Reaction definitions: positive = +1, laugh, hooray, heart, rocket; negative = -1, confused, eyes. Total reactions is the sum of all reaction types.
     * Buzzword definitions: the positive and negative keyword lists are defined at the top of analyze_data.py. Matches are whole-phrase and case-insensitive, counted in the title and body (and in the comment text for PR's).
-    * time_open is the time from creation to closure (or to merge for merged PR's), written as days, hours, minutes and seconds (e.g. 2d 5h 4m 30s); it is empty for records still open
+    * time_open is the time from creation to closure (or to merge for merged PR's), written as days
     * num_comments is the GitHub comment count for issues, and the number of non-bot conversation comments for PR's
     * The dataset contains these fields: number, record_type, status, time_open, num_assignees, num_comments, total_reactions, positive_reactions, negative_reactions, positive_buzzwords, negative_buzzwords
   - The final analysis ready dataset will be written to --out

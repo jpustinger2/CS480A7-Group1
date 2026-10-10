@@ -109,9 +109,7 @@ def timeOpen(row):
 
 
 def formatTimespan(span):
-    hours, remainder = divmod(span.seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return f"{span.days}d {hours}h {minutes}m {seconds}s"
+    return span.days
 
 
 def readComments(comments):
