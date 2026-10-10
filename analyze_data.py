@@ -109,7 +109,7 @@ def timeOpen(row):
 
 
 def formatTimespan(span):
-    return span.days
+    return round(span.total_seconds() / 86400, 2)
 
 
 def readComments(comments):
